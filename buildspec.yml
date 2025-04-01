@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo Installing dependencies...
+      - npm install
+  build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI)
+      - docker build -t $CONTAINER_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION .
+      - docker tag $CONTAINER_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION $ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - docker push $ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+  post_build:
+    commands:
+      - echo Writing imageDetail.json...
+      - printf '{"ImageURI":"%s"}' $ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION > imageDetail.json
+
+artifacts:
+  files:
+    - imageDetail.json
